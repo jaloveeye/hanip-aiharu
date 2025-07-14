@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Metadata } from "next";
+import UserStatus from "@/components/UserStatus";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "아침 식단 영양소 분석",
@@ -37,7 +39,16 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black`}
       >
-        {children}
+        <div className="min-h-screen flex flex-col">
+          <header className="w-full flex justify-end items-center px-4 py-2 gap-2 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur z-10">
+            <UserStatus />
+            <ThemeToggle />
+          </header>
+          <main className="flex-1 flex flex-col">{children}</main>
+          <footer className="w-full text-center text-xs text-gray-400 dark:text-gray-500 py-4 border-t border-gray-100 dark:border-gray-800">
+            © 2024 아이하루. All rights reserved. | 문의: jaloveeye@gmail.com
+          </footer>
+        </div>
       </body>
     </html>
   );

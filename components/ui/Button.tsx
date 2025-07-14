@@ -6,7 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseStyles =
-  "rounded px-3 py-1 font-medium transition-colors focus:outline-none focus:ring-0";
+  "rounded px-3 py-1 font-medium transition-colors focus:outline-none focus:ring-0 cursor-pointer";
 const variants = {
   primary:
     "bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700",

@@ -1,24 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/Button";
+import useUser from "@/lib/useUser";
 
 export default function UserStatus() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading, logout } = useUser();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
-    getUser();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
+  if (loading) {
+    return <span className="text-sm text-gray-400">로딩 중...</span>;
+  }
 
   if (user) {
     return (
@@ -26,12 +15,7 @@ export default function UserStatus() {
         <span className="text-sm text-gray-700 dark:text-gray-100">
           {user.user_metadata?.name || user.email} 님 환영합니다!
         </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="ml-2"
-          onClick={handleLogout}
-        >
+        <Button variant="secondary" size="sm" className="ml-2" onClick={logout}>
           로그아웃
         </Button>
       </>

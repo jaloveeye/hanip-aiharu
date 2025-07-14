@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 한입 AI하루: 아침 식단 영양소 분석 웹앱
 
-## Getting Started
+## 프로젝트 목적
 
-First, run the development server:
+사용자가 아침 식단을 사진 또는 텍스트로 입력하면, OpenAI API를 통해 식단과 영양소를 분석하고 부족한 영양소 및 다음 식사 추천을 제공하는 모바일 친화적 웹앱입니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 주요 기능
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 아침 식단 입력(사진 업로드 또는 텍스트)
+- OpenAI API 기반 식단 및 영양소 분석
+- 부족한 영양소 및 다음 식사 추천
+- 회원가입/로그인(구글, 카카오 소셜 로그인)
+- 사용자별 식단 기록 및 리포트
+- 다크/라이트 모드 지원
+- 모바일 최적화 UI/UX
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 기술 스택
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 15** (React 기반 프레임워크)
+- **TypeScript**
+- **Tailwind CSS** (다크/라이트 모드 지원)
+- **Supabase** (DB 및 인증)
+- **OpenAI API** (식단 분석)
 
-## Learn More
+## 환경설정
 
-To learn more about Next.js, take a look at the following resources:
+1. 레포지토리 클론
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   git clone https://github.com/jaloveeye/hanip-aiharu.git
+   cd hanip-aiharu
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. 패키지 설치
 
-## Deploy on Vercel
+   ```bash
+   npm install
+   # 또는 yarn, pnpm, bun
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. 환경변수 설정
+   - `.env.example` 파일 참고하여 `.env` 파일 생성 및 값 입력
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. 개발 서버 실행
+
+   ```bash
+   npm run dev
+   ```
+
+## 기여 방법
+
+1. 이슈 등록 또는 포크 후 브랜치 생성
+2. 기능 개발 및 테스트
+3. PR(Pull Request) 생성
+
+## 라이선스
+
+MIT
+
+---
+문의: <jaloveeye@gmail.com>
