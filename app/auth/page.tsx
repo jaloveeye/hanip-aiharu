@@ -34,6 +34,7 @@ export default function AuthPage() {
       const siteUrl =
         process.env.NEXT_PUBLIC_SITE_URL ||
         (typeof window !== "undefined" ? window.location.origin : "");
+      console.log("redirectTo:", siteUrl + "/auth/callback");
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: siteUrl + "/auth/callback" },
