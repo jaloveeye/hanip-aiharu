@@ -3,6 +3,26 @@
 import useUser from "@/lib/useUser";
 import { Button } from "@/components/ui/Button";
 import { useState } from "react";
+import Popup from "@/components/ui/Popup";
+
+// 색상 매핑 상수 분리
+const NUTRITION_COLOR_MAP: Record<string, string> = {
+  탄수화물: "#60a5fa",
+  단백질: "#34d399",
+  지방: "#fbbf24",
+  섬유질: "#a78bfa",
+};
+
+// 팝업 상태/핸들러 커스텀 훅
+function usePopup() {
+  const [popup, setPopup] = useState<{ open: boolean; message: string }>({
+    open: false,
+    message: "",
+  });
+  const showPopup = (message: string) => setPopup({ open: true, message });
+  const closePopup = () => setPopup({ open: false, message: "" });
+  return { popup, showPopup, closePopup };
+}
 
 function ChartIllustration() {
   // 원형 차트 스타일 SVG (영양소 예시)
@@ -94,10 +114,18 @@ export default function Home() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [result, setResult] = useState<null | {
-    nutrition: { label: string; value: number; color: string }[];
-    advice: string;
+    meal: string;
+    nutrition: {
+      label: string;
+      value: number;
+      unit?: string;
+      color?: string;
+    }[];
+    lack: string[];
+    recommend: string[];
   }>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const { popup, showPopup, closePopup } = usePopup();
 
   // 이미지 업로드 핸들러
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +138,37 @@ export default function Home() {
       reader.readAsDataURL(file);
     } else {
       setImagePreview(null);
+    }
+  };
+
+  // 식단 분석 핸들러
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setResult(null);
+    try {
+      const formData = new FormData();
+      if (input.trim()) formData.append("text", input.trim());
+      if (image) formData.append("image", image);
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.duplicate) {
+        showPopup(data.message || "이미 분석된 식단입니다.");
+        return;
+      }
+      setResult({
+        ...data,
+        nutrition: (
+          data.nutrition as { label: string; value: number; unit?: string }[]
+        ).map((n) => ({ ...n, color: NUTRITION_COLOR_MAP[n.label] ?? "#ddd" })),
+      });
+    } catch {
+      showPopup("분석 중 오류가 발생했습니다.");
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -170,121 +229,125 @@ export default function Home() {
     );
   }
 
-  // 로그인된 경우: 식단 입력/분석/차트 UI
-  const dummyData = [
-    { label: "탄수화물", value: 60, color: "#60a5fa" },
-    { label: "단백질", value: 20, color: "#34d399" },
-    { label: "지방", value: 15, color: "#fbbf24" },
-    { label: "섬유질", value: 5, color: "#a78bfa" },
-  ];
-  const dummyAdvice = image
-    ? "이미지에서 식단을 분석했습니다. 단백질과 섬유질이 부족합니다. 달걀, 두부, 채소를 추가해보세요!"
-    : "단백질과 섬유질이 부족합니다. 달걀, 두부, 채소를 추가해보세요!";
-
-  const handleAnalyze = async () => {
-    setAnalyzing(true);
-    // 실제 API 연동 전까지 더미 데이터 사용
-    setTimeout(() => {
-      setResult({ nutrition: dummyData, advice: dummyAdvice });
-      setAnalyzing(false);
-    }, 1200);
-  };
-
   return (
-    <div className="flex-1 flex flex-col items-center justify-center py-8 px-2 bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
-      <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col items-center border border-gray-100 dark:border-gray-800">
-        <h2 className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
-          아침 식단을 입력(텍스트 또는 사진)하고
-          <br />
-          AI 분석 결과를 확인하세요
-        </h2>
-        <input
-          type="text"
-          className="w-full mb-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="예: 계란, 토스트, 우유"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setResult(null);
-          }}
-          disabled={analyzing}
-        />
-        <label className="w-full flex flex-col items-center justify-center cursor-pointer mb-4">
-          <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-            또는 사진 업로드
-          </span>
+    <>
+      <Popup open={popup.open} message={popup.message} onClose={closePopup} />
+      <div className="flex-1 flex flex-col items-center justify-center py-8 px-2 bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
+        <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col items-center border border-gray-100 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
+            아침 식단을 입력(텍스트 또는 사진)하고
+            <br />
+            AI 분석 결과를 확인하세요
+          </h2>
           <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageChange}
+            type="text"
+            className="w-full mb-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="예: 계란, 토스트, 우유"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setResult(null);
+            }}
             disabled={analyzing}
           />
-          <div className="w-full h-28 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 mt-1">
-            {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="업로드 미리보기"
-                className="max-h-24 max-w-full object-contain rounded"
-              />
-            ) : (
-              <span className="text-gray-400 dark:text-gray-600 text-sm">
-                이미지 파일을 선택하세요
-              </span>
-            )}
-          </div>
-        </label>
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          className="w-full mb-6 flex flex-row items-center justify-center"
-          onClick={handleAnalyze}
-          disabled={analyzing || (!input.trim() && !image)}
-        >
-          {analyzing ? (
-            <svg
-              className="animate-spin mr-2 h-5 w-5 text-white align-middle self-center flex-shrink-0"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              />
-            </svg>
-          ) : null}
-          {analyzing ? "분석 중..." : "분석하기"}
-        </Button>
-        {result && (
-          <div className="w-full flex flex-col items-center mt-2">
-            <DummyNutritionChart data={result.nutrition} />
-            <div className="flex flex-wrap justify-center gap-2 mb-2">
-              {result.nutrition.map((n) => (
-                <span
-                  key={n.label}
-                  className="text-xs px-2 py-1 rounded-full"
-                  style={{ background: n.color, color: "#fff", opacity: 0.85 }}
-                >
-                  {n.label}: {n.value}%
+          <label className="w-full flex flex-col items-center justify-center cursor-pointer mb-4">
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              또는 사진 업로드
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+              disabled={analyzing}
+            />
+            <div className="w-full h-28 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 mt-1">
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="업로드 미리보기"
+                  className="max-h-24 max-w-full object-contain rounded"
+                />
+              ) : (
+                <span className="text-gray-400 dark:text-gray-600 text-sm">
+                  이미지 파일을 선택하세요
                 </span>
-              ))}
+              )}
             </div>
-            <div className="text-sm text-gray-700 dark:text-gray-200 text-center font-medium mt-2">
-              {result.advice}
+          </label>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            className="w-full mb-6 flex flex-row items-center justify-center"
+            onClick={handleAnalyze}
+            disabled={analyzing || (!input.trim() && !image)}
+          >
+            {analyzing ? (
+              <svg
+                className="animate-spin mr-2 h-5 w-5 text-white align-middle self-center flex-shrink-0"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            ) : null}
+            {analyzing ? "분석 중..." : "분석하기"}
+          </Button>
+          {result && (
+            <div className="w-full flex flex-col items-center mt-2">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                분석된 식단:{" "}
+                <span className="font-semibold text-gray-700 dark:text-gray-200">
+                  {result.meal}
+                </span>
+              </div>
+              <DummyNutritionChart
+                data={result.nutrition.map((n) => ({
+                  ...n,
+                  color: n.color ?? "#ddd",
+                }))}
+              />
+              <div className="flex flex-wrap justify-center gap-2 mb-2">
+                {result.nutrition.map((n) => (
+                  <span
+                    key={n.label}
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{
+                      background: n.color,
+                      color: "#fff",
+                      opacity: 0.85,
+                    }}
+                  >
+                    {n.label}: {n.value}
+                    {n.unit || "%"}
+                  </span>
+                ))}
+              </div>
+              <div className="text-sm text-red-500 dark:text-red-300 text-center font-medium mt-2">
+                부족한 영양소:{" "}
+                {result.lack.length ? result.lack.join(", ") : "없음"}
+              </div>
+              <div className="text-sm text-blue-600 dark:text-blue-300 text-center font-medium mt-1">
+                추천 식단:{" "}
+                {result.recommend.length ? result.recommend.join(", ") : "-"}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

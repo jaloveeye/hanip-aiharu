@@ -1,6 +1,12 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createBrowserClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export default function useUser() {
   const [user, setUser] = useState<User | null>(null);
