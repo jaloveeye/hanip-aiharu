@@ -1,13 +1,12 @@
 "use client";
 import { Button } from "@/components/ui/Button";
 import useUser from "@/lib/useUser";
-import Loading from "@/components/ui/Loading";
 
 export default function UserStatus() {
   const { user, loading, logout } = useUser();
 
   if (loading) {
-    return <Loading message="사용자 정보를 불러오는 중..." />;
+    return null;
   }
 
   if (user) {

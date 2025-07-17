@@ -8,6 +8,8 @@ import useAnalyzeMeal from "@/lib/hooks/useAnalyzeMeal";
 import useImageUpload from "@/lib/hooks/useImageUpload";
 import Loading from "@/components/ui/Loading";
 import Image from "next/image";
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
 
 function ChartIllustration() {
   return (
@@ -94,13 +96,20 @@ function DummyNutritionChart({
 export default function Home() {
   const { user, loading } = useUser();
   const { popup, showPopup, closePopup } = usePopup();
+  const router = useRouter();
   const { input, setInput, result, setResult, analyzing, handleAnalyze } =
-    useAnalyzeMeal({ showPopup });
+    useAnalyzeMeal({ showPopup, router });
   const { image, imagePreview, handleImageChange } = useImageUpload({
     setResult,
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (loading) return <Loading message="사용자 정보를 불러오는 중..." />;
+  if (loading)
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loading message="사용자 정보를 불러오는 중..." />
+      </div>
+    );
   if (!user) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
@@ -167,37 +176,67 @@ export default function Home() {
             <br />
             AI 분석 결과를 확인하세요
           </h2>
-          <input
-            type="text"
-            className="w-full mb-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            placeholder="예: 계란, 토스트, 우유"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setResult(null);
-            }}
-            disabled={analyzing}
-          />
-          <label className="w-full flex flex-col items-center justify-center cursor-pointer mb-4">
+          <div className="relative w-full mb-2">
+            <input
+              type="text"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="예: 계란, 토스트, 우유"
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setResult(null);
+              }}
+              disabled={!!image}
+            />
+            {input && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setInput("")}
+                tabIndex={-1}
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <label className="w-full flex flex-col items-center justify-center cursor-pointer mb-4 relative">
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               또는 사진 업로드
             </span>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={handleImageChange}
-              disabled={analyzing}
+              disabled={!!input}
             />
-            <div className="w-full h-28 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 mt-1">
+            <div className="w-full h-28 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 mt-1 relative">
               {imagePreview ? (
-                <Image
-                  src={imagePreview}
-                  alt="업로드 미리보기"
-                  width={200}
-                  height={96}
-                  className="max-h-24 max-w-full object-contain rounded"
-                />
+                <>
+                  <Image
+                    src={imagePreview}
+                    alt="업로드 미리보기"
+                    width={200}
+                    height={96}
+                    className="max-h-24 max-w-full object-contain rounded"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 bg-white/80 dark:bg-gray-900/80 rounded-full p-1 text-gray-500 hover:text-red-500 shadow"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                      handleImageChange({
+                        target: { files: null },
+                      } as unknown as React.ChangeEvent<HTMLInputElement>);
+                    }}
+                    tabIndex={-1}
+                  >
+                    ×
+                  </button>
+                </>
               ) : (
                 <span className="text-gray-400 dark:text-gray-600 text-sm">
                   이미지 파일을 선택하세요
@@ -210,10 +249,12 @@ export default function Home() {
             variant="primary"
             size="md"
             className="w-full mb-6 flex flex-row items-center justify-center"
-            onClick={() => handleAnalyze()}
+            onClick={() => handleAnalyze(image)}
             disabled={analyzing || (!input.trim() && !image)}
           >
-            {analyzing ? <Loading message="분석 중..." /> : null}
+            {analyzing ? (
+              <Loading message="분석 중..." colorClassName="text-white" />
+            ) : null}
             {!analyzing && "분석하기"}
           </Button>
           {result && (
