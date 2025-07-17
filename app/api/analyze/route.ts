@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabaseServerClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getTodayString } from "@/lib/utils";
 import OpenAI from "openai";
 
 export type AnalyzeResponse =
@@ -95,6 +94,14 @@ async function callOpenAIText(meal: string): Promise<string> {
   }
 }
 
+// 서울(UTC+9) 기준 오늘 날짜 YYYY-MM-DD 반환
+function getSeoulTodayString() {
+  const now = new Date();
+  // UTC+9로 변환
+  const seoul = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return seoul.toISOString().slice(0, 10);
+}
+
 export async function POST(req: Request): Promise<Response> {
   console.log("[API] /api/analyze POST 진입");
   let body;
@@ -137,7 +144,29 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
 
-    const analyzed_at = getTodayString();
+    // 서울 기준 오늘 날짜
+    const analyzed_at = getSeoulTodayString();
+    // 하루 n번 제한 (기본 1)
+    const N = 1;
+    const { count, error: countError } = await supabase
+      .from("member_meal_analysis")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user_id)
+      .eq("analyzed_at", analyzed_at);
+    if (countError) {
+      console.error("[API] /api/analyze DB count 오류", countError);
+      return NextResponse.json(
+        { error: "DB 조회 오류" } satisfies AnalyzeResponse,
+        { status: 500 }
+      );
+    }
+    if ((count ?? 0) >= N) {
+      return NextResponse.json({
+        duplicate: true,
+        message: `오늘은 이미 ${N}번 분석하셨습니다. 내일 다시 시도해 주세요.`,
+      } satisfies AnalyzeResponse);
+    }
+
     // 중복 체크
     const { exists, error: selectError } = await checkDuplicate(
       supabase,
@@ -162,36 +191,75 @@ export async function POST(req: Request): Promise<Response> {
 
     // OpenAI 호출
     let analysisText = "";
+    let mealTextForInsert = meal;
     if (imageBase64) {
       // 1. 사진에서 식재료/섭취량 추출
       const foodSummary = await callOpenAIVision(imageBase64);
       // 2. 추출된 식재료/섭취량을 텍스트로 넣어 OpenAI 텍스트 분석
       analysisText = await callOpenAIText(foodSummary);
+      mealTextForInsert = foodSummary;
     } else {
       // 텍스트 입력 → 바로 OpenAI 텍스트 분석
       analysisText = await callOpenAIText(meal);
     }
     console.log("[API] /api/analyze 최종 분석 결과", analysisText);
 
-    // 분석 결과 DB 저장
-    const { error: insertError } = await supabase
+    // 분석 결과 DB 저장 (insert 후 id 반환)
+    const { data: analysisInsertData, error: insertError } = await supabase
       .from("member_meal_analysis")
       .insert([
         {
           user_id,
-          meal_text: meal,
+          meal_text: mealTextForInsert,
           result: analysisText,
           analyzed_at,
           source_type: imageBase64 ? "image" : "text",
           email,
         },
-      ]);
+      ])
+      .select("id")
+      .single();
     if (insertError) {
       console.error("[API] /api/analyze DB 저장 오류", insertError);
       return NextResponse.json(
         { error: "DB 저장 오류" } satisfies AnalyzeResponse,
         { status: 500 }
       );
+    }
+    const analysis_id = analysisInsertData?.id;
+
+    // 추천 식단(ingredients) 추출 및 저장 (여러 줄 지원)
+    let ingredients = "";
+    // 1. 추천 식단 블록 전체 추출
+    const recommendBlockMatch = analysisText.match(
+      /(추천 식단|내일 아침 추천 식단)[^\n]*\n([\s\S]+)/
+    );
+    if (recommendBlockMatch) {
+      const block = recommendBlockMatch[2];
+      // 2. 각 줄에서 '- ' 또는 '• '로 시작하는 항목만 추출
+      const lines = block.split("\n");
+      const items = lines
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("-") || line.startsWith("•"))
+        .map((line) => line.replace(/^[-•]\s*/, "").replace(/^[-•]/, ""))
+        .filter(Boolean);
+      ingredients = items.join(",");
+    }
+    if (ingredients && analysis_id) {
+      const { error: recError } = await supabase
+        .from("recommendations")
+        .insert([
+          {
+            user_id,
+            analysis_id,
+            date: analyzed_at,
+            ingredients,
+            content: ingredients, // content에도 값 저장
+          },
+        ]);
+      if (recError) {
+        console.error("[API] /api/analyze 추천식단 저장 오류", recError);
+      }
     }
 
     // 최종 응답: 전체 결과만 반환

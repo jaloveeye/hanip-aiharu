@@ -10,7 +10,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuth = async () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.replace("/");
+      router.replace("/meal");
     };
     handleAuth();
   }, [router]);
