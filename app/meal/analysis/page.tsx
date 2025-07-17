@@ -73,8 +73,19 @@ export default function MealAnalysisPage() {
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
               분석된 식단:{" "}
               <span className="font-semibold text-gray-700 dark:text-gray-200">
-                {result.meal}
+                {result.meal.replace(/^사진 속 식재료:\s*/, "")}
               </span>
+            </div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+              분석 일시:{" "}
+              {new Date(result.analyzed_at)
+                .toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                })
+                .replace(/\./g, ".")
+                .replace(/\s/g, "")}
             </div>
             <div className="whitespace-pre-line text-gray-800 dark:text-gray-100 text-sm mt-2">
               {result.result}
