@@ -8,8 +8,9 @@ import useAnalyzeMeal from "@/lib/hooks/useAnalyzeMeal";
 import useImageUpload from "@/lib/hooks/useImageUpload";
 import Loading from "@/components/ui/Loading";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 function ChartIllustration() {
   return (
@@ -93,6 +94,16 @@ function DummyNutritionChart({
   );
 }
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+
+function getSeoulTodayString() {
+  const now = new Date();
+  const seoul = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return seoul.toISOString().slice(0, 10);
+}
+
 export default function MealPage() {
   const { user, loading } = useUser();
   const { popup, showPopup, closePopup } = usePopup();
@@ -104,7 +115,27 @@ export default function MealPage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (loading)
+  // 오늘 분석 기록 fetch
+  const [todayAnalyzed, setTodayAnalyzed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const fetchToday = async () => {
+      const today = getSeoulTodayString();
+      const { data, error } = await supabase
+        .from("member_meal_analysis")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("analyzed_at", today);
+      if (error) {
+        setTodayAnalyzed(false); // 에러 시 입력 UI 노출
+      } else {
+        setTodayAnalyzed((data?.length ?? 0) > 0);
+      }
+    };
+    fetchToday();
+  }, [user]);
+
+  if (loading || todayAnalyzed === null)
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loading message="사용자 정보를 불러오는 중..." />
@@ -160,6 +191,28 @@ export default function MealPage() {
               <circle cx="8.5" cy="12" r="1.5" />
             </svg>
             로그인하러 가기
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // 오늘 분석 기록이 있으면 버튼만 노출
+  if (todayAnalyzed) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-8 px-2 bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
+        <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col items-center border border-gray-100 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
+            오늘은 이미 식단 분석을 완료하셨습니다
+          </h2>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base py-2 rounded-lg shadow"
+            onClick={() => router.push("/meal/analysis")}
+          >
+            오늘 분석한 내용 보기
           </Button>
         </div>
       </div>
@@ -269,31 +322,41 @@ export default function MealPage() {
                   {result.meal}
                 </span>
               </div>
+              {/* 주요 영양소 바 차트 */}
               <DummyNutritionChart
                 data={result.nutrition.map((n) => ({
-                  ...n,
-                  color: n.color ?? "#ddd",
+                  label: n.label,
+                  value: n.value,
+                  color: n.color || "#60a5fa",
                 }))}
               />
+              {/* 부족/과잉/추천 식단 */}
               <div className="flex flex-wrap justify-center gap-2 mb-2">
-                {result.nutrition.map((n) => (
-                  <span
-                    key={n.label}
-                    className="text-xs px-2 py-1 rounded-full"
-                    style={{
-                      background: n.color,
-                      color: "#fff",
-                      opacity: 0.85,
-                    }}
-                  >
-                    {n.label}: {n.value}
-                    {n.unit || "%"}
-                  </span>
-                ))}
+                {result.nutrition.map((n) => {
+                  const color = n.color || "#60a5fa";
+                  return (
+                    <span
+                      key={n.label}
+                      className="text-xs px-2 py-1 rounded-full"
+                      style={{
+                        background: color,
+                        color: "#fff",
+                        opacity: 0.85,
+                      }}
+                    >
+                      {n.label}: {n.value}
+                    </span>
+                  );
+                })}
               </div>
               <div className="text-sm text-red-500 dark:text-red-300 text-center font-medium mt-2">
                 부족한 영양소:{" "}
                 {result.lack.length ? result.lack.join(", ") : "없음"}
+              </div>
+              <div className="text-sm text-yellow-600 dark:text-yellow-300 text-center font-medium mt-1">
+                과잉된 영양소: {/* result에 과잉 정보가 있다면 여기에 추가 */}
+                {/* 예시: result.excess ? result.excess.join(", ") : "없음" */}
+                없음
               </div>
               <div className="text-sm text-blue-600 dark:text-blue-300 text-center font-medium mt-1">
                 추천 식단:{" "}

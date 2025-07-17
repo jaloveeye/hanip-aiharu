@@ -4,6 +4,10 @@ import useUser from "@/lib/useUser";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import Loading from "@/components/ui/Loading";
+import {
+  parseActualNutrition,
+  parseLackExcess,
+} from "@/lib/utils/analysisParser";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -60,64 +64,6 @@ export default function MealDashboardPage() {
     })();
   }, [user]);
 
-  // 간단 파싱: result에서 영양소 요약표(3번)와 부족/과잉(5번) 추출
-  function parseNutrition(result: string) {
-    // 3. 전체 식사의 열량과 주요 영양소 요약표
-    const nutrition: { label: string; value: string }[] = [];
-    const match = result.match(
-      /3[.\)]?\s*전체 식사의 열량[^\n]*\n([\s\S]+?)\n\s*4[.\)]/
-    );
-    if (match) {
-      const lines = match[1].split("\n");
-      for (const line of lines) {
-        const m = line.match(/-\s*([^:]+):\s*([^\n]+)/);
-        if (m) nutrition.push({ label: m[1].trim(), value: m[2].trim() });
-      }
-    }
-    // 5. 부족/과잉 영양소
-    let lack = "",
-      excess = "";
-    // 5. 부족한 영양소 및 과잉 항목 블록 파싱
-    const block5 = result.match(
-      /5[.\)]?\s*부족한 영양소 및 과잉 항목:([\s\S]+?)(\n\s*6[.\)]|$)/
-    );
-    if (block5) {
-      const block = block5[1];
-      const lackMatch = block.match(/-\s*부족[:：]?\s*([^\n]+)/);
-      if (lackMatch) lack = lackMatch[1].trim();
-      const excessMatch = block.match(/-\s*과잉[:：]?\s*([^\n]+)/);
-      if (excessMatch) excess = excessMatch[1].trim();
-    } else {
-      const lackMatch = result.match(/부족한 영양소[:：]?\s*([^\n]+)/);
-      if (lackMatch) lack = lackMatch[1].trim();
-      const excessMatch = result.match(/과잉된 항목[:：]?\s*([^\n]+)/);
-      if (excessMatch) excess = excessMatch[1].trim();
-    }
-    return { nutrition, lack, excess };
-  }
-
-  // 영양소별 실제 섭취량 파싱 (숫자만 추출)
-  function parseActualNutrition(result: string) {
-    const actual: { [key: string]: number } = {};
-    const match = result.match(
-      /3[.\)]?\s*전체 식사의 열량[^\n]*\n([\s\S]+?)\n\s*4[.\)]/
-    );
-    if (match) {
-      const lines = match[1].split("\n");
-      for (const line of lines) {
-        const m = line.match(
-          /-\s*([^:]+):\s*약?\s*([\d\.]+)([a-zA-Zㄱ-ㅎ가-힣㎍RE]*)/
-        );
-        if (m) {
-          const label = m[1].trim();
-          const value = parseFloat(m[2]);
-          actual[label] = value;
-        }
-      }
-    }
-    return actual;
-  }
-
   if (loading || fetching)
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -147,7 +93,7 @@ export default function MealDashboardPage() {
         {results.length > 0 && (
           <div className="w-full mt-2">
             {results.map((r, i) => {
-              const parsed = parseNutrition(r.result);
+              const parsed = parseLackExcess(r.result);
               const actual = parseActualNutrition(r.result);
               return (
                 <div
