@@ -2,15 +2,23 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabaseServerClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getTodayString } from "@/lib/utils";
 
-// 오늘 날짜(YYYY-MM-DD) 반환 유틸
-function getTodayString() {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
+// API 응답 타입 정의
+export type AnalyzeResponse =
+  | { error: string }
+  | { duplicate: true; message: string }
+  | ({ duplicate: false } & {
+      meal: string;
+      nutrition: {
+        label: string;
+        value: number;
+        unit?: string;
+        color?: string;
+      }[];
+      lack: string[];
+      recommend: string[];
+    });
 
 // 중복 체크 함수
 async function checkDuplicate(
@@ -58,7 +66,7 @@ async function insertMealAnalysis(
   ]);
 }
 
-export async function POST() {
+export async function POST(): Promise<Response> {
   // 더미 데이터
   const dummy = {
     meal: "시리얼, 견관류 1봉, 포도 10알",
@@ -87,7 +95,7 @@ export async function POST() {
 
   if (!user_id || !email) {
     return NextResponse.json(
-      { error: "로그인이 필요합니다." },
+      { error: "로그인이 필요합니다." } satisfies AnalyzeResponse,
       { status: 401 }
     );
   }
@@ -101,13 +109,16 @@ export async function POST() {
     analyzed_at
   );
   if (selectError) {
-    return NextResponse.json({ error: "DB 조회 오류" }, { status: 500 });
+    return NextResponse.json(
+      { error: "DB 조회 오류" } satisfies AnalyzeResponse,
+      { status: 500 }
+    );
   }
   if (exists) {
     return NextResponse.json({
       duplicate: true,
       message: "이미 분석된 식단입니다.",
-    });
+    } satisfies AnalyzeResponse);
   }
 
   // insert
@@ -119,8 +130,14 @@ export async function POST() {
     analyzed_at,
   });
   if (error) {
-    return NextResponse.json({ error: "DB 저장 오류" }, { status: 500 });
+    return NextResponse.json(
+      { error: "DB 저장 오류" } satisfies AnalyzeResponse,
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ duplicate: false, ...dummy });
+  return NextResponse.json({
+    duplicate: false,
+    ...dummy,
+  } satisfies AnalyzeResponse);
 }

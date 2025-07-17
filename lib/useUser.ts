@@ -19,7 +19,6 @@ export default function useUser() {
       setLoading(false);
     };
     getUser();
-    // 실시간 인증 상태 반영
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);

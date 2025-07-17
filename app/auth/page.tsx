@@ -3,31 +3,11 @@
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/Button";
+import Loading from "@/components/ui/Loading";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
-
-function SpinnerIcon() {
-  return (
-    <svg className="animate-spin mr-2 h-5 w-5 text-white" viewBox="0 0 24 24">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-        fill="none"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-      />
-    </svg>
-  );
-}
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
@@ -38,7 +18,6 @@ export default function AuthPage() {
       const siteUrl =
         process.env.NEXT_PUBLIC_SITE_URL ||
         (typeof window !== "undefined" ? window.location.origin : "");
-      console.log("redirectTo:", siteUrl + "/auth/callback");
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: siteUrl + "/auth/callback" },
@@ -52,10 +31,7 @@ export default function AuthPage() {
     <div className="flex-1 flex items-center justify-center relative">
       {loading && (
         <div className="fixed inset-0 bg-black/40 flex flex-col items-center justify-center z-50">
-          <SpinnerIcon />
-          <span className="mt-4 text-white text-lg font-semibold">
-            로그인 중...
-          </span>
+          <Loading message="로그인 중..." />
         </div>
       )}
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 w-full max-w-xs flex flex-col items-center">

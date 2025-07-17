@@ -6,6 +6,5 @@ export const config = {
 };
 
 export async function middleware(request: NextRequest) {
-  console.log("[미들웨어 진입]", request.nextUrl.pathname);
   return updateSession(request);
 }

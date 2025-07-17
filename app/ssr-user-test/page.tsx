@@ -8,7 +8,6 @@ export default async function SsrUserTestPage() {
   const { data, error } = await supabase.auth.getUser();
 
   if (error || !data?.user) {
-    // 로그인 안 된 경우 로그인 페이지로 리다이렉트
     redirect("/auth");
   }
 
