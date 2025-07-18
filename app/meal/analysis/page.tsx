@@ -12,6 +12,7 @@ import {
 import FAQ from "@/components/ui/FAQ";
 import AlternativeFoods from "@/components/ui/AlternativeFoods";
 import NutritionModal from "@/components/ui/NutritionModal";
+import RecommendationCheck from "@/components/ui/RecommendationCheck";
 import {
   getNutritionTooltip,
   getAlternativeFoods,
@@ -25,6 +26,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 interface AnalysisResult {
+  id: number;
   meal_text: string;
   result: string;
   analyzed_at: string;
@@ -76,7 +78,7 @@ export default function MealAnalysisPage() {
     (async () => {
       const { data, error } = await supabase
         .from("member_meal_analysis")
-        .select("meal_text, result, analyzed_at, source_type")
+        .select("id, meal_text, result, analyzed_at, source_type")
         .eq("user_id", user.id)
         .order("analyzed_at", { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
@@ -152,6 +154,9 @@ export default function MealAnalysisPage() {
         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 w-full">
           <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
             {DAD_GUIDE_MESSAGES.encouragement}
+          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-300 text-center mt-2">
+            💡 새로운 식단을 분석하면 이전 추천 식단이 자동으로 체크됩니다!
           </p>
         </div>
 
@@ -498,6 +503,11 @@ export default function MealAnalysisPage() {
                             </li>
                           ))}
                         </ul>
+                        {/* 추천 식단 체크 컴포넌트 */}
+                        <RecommendationCheck
+                          analysis_id={result.id}
+                          recommendations={recommend}
+                        />
                       </>
                     ) : (
                       <span className="text-xs text-gray-400">

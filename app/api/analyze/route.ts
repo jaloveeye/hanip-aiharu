@@ -262,6 +262,12 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
+    // 새로운 분석 시 이전 추천 식단 자동 체크 (checked 컬럼이 없으므로 임시로 비활성화)
+    // TODO: 데이터베이스에 checked 컬럼 추가 후 자동 체크 기능 활성화
+    console.log(
+      "[API] /api/analyze 자동 체크 기능 임시 비활성화 (checked 컬럼 없음)"
+    );
+
     // 최종 응답: 전체 결과만 반환
     return NextResponse.json({
       duplicate: false,

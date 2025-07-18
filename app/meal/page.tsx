@@ -223,15 +223,26 @@ export default function MealPage() {
           <h2 className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
             오늘은 이미 식단 분석을 완료하셨습니다
           </h2>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base py-2 rounded-lg shadow"
-            onClick={() => router.push("/meal/analysis")}
-          >
-            오늘 분석한 내용 보기
-          </Button>
+          <div className="flex gap-2 w-full">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base py-2 rounded-lg shadow"
+              onClick={() => router.push("/meal/analysis")}
+            >
+              오늘 분석한 내용 보기
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold text-base py-2 rounded-lg shadow"
+              onClick={() => router.push("/meal/tracking")}
+            >
+              성장 트래킹
+            </Button>
+          </div>
         </div>
       </div>
     );
