@@ -115,18 +115,108 @@ export default function MealDashboardPage() {
                   {/* 분석된 식단 태그를 날짜 아래에, 단위 포함 */}
                   <div className="flex flex-wrap gap-1 mb-2">
                     {(() => {
-                      // 식재료 파싱: 1. 떡: 약 7조각\n2. 소시지: 약 5개 ...
-                      const mealText = r.meal_text.replace(
-                        /^사진 속 식재료:\s*/,
-                        ""
-                      );
-                      // 1. 떡: 약 7조각\n2. 소시지: 약 5개 ...
-                      const items = mealText
-                        .split(/\n|,|\s*\d+\.\s*/)
-                        .map((s) => s.trim())
-                        .filter(
-                          (s) => s && s.length > 0 && s !== "사진 속 식재료"
+                      // meal_text에서 섭취량 정보 추출
+                      const mealText = r.meal_text;
+                      const resultText = r.result;
+
+                      // 1. meal_text에서 섭취량 정보가 있는지 확인
+                      if (mealText.includes("섭취량:")) {
+                        // meal_text에서 섭취량 섹션 추출
+                        const quantitiesMatch = mealText.match(
+                          /2\.\s*섭취량:\s*\n([\s\S]+?)(?=\n\n|$)/
                         );
+                        if (quantitiesMatch) {
+                          const quantities = quantitiesMatch[1]
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(
+                              (line) =>
+                                line.startsWith("-") || line.startsWith("•")
+                            )
+                            .map((line) => line.replace(/^[-•]\s*/, ""))
+                            .filter(Boolean)
+                            .map((item) => {
+                              // "견과류 믹스: 약 한 줌" 형태 그대로 유지
+                              return item;
+                            });
+
+                          return quantities.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+                            >
+                              {item}
+                            </span>
+                          ));
+                        }
+                      }
+
+                      // 2. meal_text에서 "사진 속 식재료:" 형태 처리
+                      if (mealText.includes("사진 속 식재료:")) {
+                        const items = mealText
+                          .replace(/^사진 속 식재료:\s*\n/, "")
+                          .split(/\n/)
+                          .map((line) => line.trim())
+                          .filter((line) => line.match(/^\d+\.\s+/))
+                          .map((line) => {
+                            // "1. 떡: 약 7조각" 형태에서 "떡: 약 7조각" 형태로 변환
+                            const match = line.match(
+                              /^\d+\.\s+([^:]+):\s*(.+)$/
+                            );
+                            return match
+                              ? `${match[1].trim()}: ${match[2].trim()}`
+                              : line.replace(/^\d+\.\s+/, "");
+                          })
+                          .filter(Boolean);
+
+                        return items.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+                          >
+                            {item}
+                          </span>
+                        ));
+                      }
+
+                      // 3. result에서 섭취량 정보 추출 (기존 방식)
+                      const quantitiesMatch = resultText.match(
+                        /2\.\s*섭취량:\s*\n([\s\S]+?)\n\s*3\.\s*전체/
+                      );
+                      if (quantitiesMatch) {
+                        const quantities = quantitiesMatch[1]
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter(
+                            (line) =>
+                              line.startsWith("-") || line.startsWith("•")
+                          )
+                          .map((line) => line.replace(/^[-•]\s*/, ""))
+                          .filter(Boolean)
+                          .map((item) => {
+                            // "견과류 믹스: 약 한 줌" 형태 그대로 유지
+                            return item;
+                          });
+
+                        return quantities.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+                          >
+                            {item}
+                          </span>
+                        ));
+                      }
+
+                      // 4. 기본 파싱 (하위 호환성)
+                      const items = resultText
+                        .split(/\n|,|\s*\d+\.\s*/)
+                        .map((s: string) => s.trim())
+                        .filter(
+                          (s: string) =>
+                            s && s.length > 0 && s !== "사진 속 식재료"
+                        );
+
                       return items.map((item, idx) => (
                         <span
                           key={idx}
@@ -154,6 +244,24 @@ export default function MealDashboardPage() {
                             (actualValue / recommended) * 100
                           );
                         }
+
+                        // 부족/과잉 영양소 정보 활용
+                        const { lack, excess } = parseLackExcess(r.result);
+                        const lackList = lack
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean);
+                        const excessList = excess
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean);
+
+                        // 색상 결정 - 타이틀 색상과 매칭
+                        let barColor = "bg-blue-400";
+                        if (lackList.includes(label)) barColor = "bg-red-400"; // 부족한 영양소: 빨간색 (타이틀과 동일)
+                        if (excessList.includes(label))
+                          barColor = "bg-yellow-400"; // 과잉된 영양소: 노란색 (타이틀과 동일)
+
                         return (
                           <div
                             key={idx}
@@ -164,11 +272,7 @@ export default function MealDashboardPage() {
                             </div>
                             <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded">
                               <div
-                                className={`h-3 rounded ${
-                                  percent !== null && percent >= 100
-                                    ? "bg-red-400"
-                                    : "bg-blue-400"
-                                }`}
+                                className={`h-3 rounded ${barColor}`}
                                 style={{
                                   width:
                                     percent !== null
