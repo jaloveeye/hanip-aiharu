@@ -11,6 +11,13 @@ import Image from "next/image";
 import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import NutritionModal from "@/components/ui/NutritionModal";
+import {
+  DAD_GUIDE_MESSAGES,
+  getRandomPositiveFeedback,
+  getNutritionTooltip,
+} from "@/lib/utils/dadGuide";
+import PositiveFeedbackCard from "@/components/ui/PositiveFeedback";
 
 function ChartIllustration() {
   return (
@@ -117,6 +124,17 @@ export default function MealPage() {
 
   // 오늘 분석 기록 fetch
   const [todayAnalyzed, setTodayAnalyzed] = useState<boolean | null>(null);
+
+  // 영양소 모달 상태
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    nutrient: string;
+    content: string;
+  }>({
+    isOpen: false,
+    nutrient: "",
+    content: "",
+  });
   useEffect(() => {
     if (!user) return;
     const fetchToday = async () => {
@@ -224,11 +242,26 @@ export default function MealPage() {
       <Popup open={popup.open} message={popup.message} onClose={closePopup} />
       <div className="flex-1 flex flex-col items-center justify-center py-8 px-2 bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
         <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col items-center border border-gray-100 dark:border-gray-800">
+          {/* 아빠를 위한 친절한 안내 메시지 */}
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
+              {DAD_GUIDE_MESSAGES.welcome}
+            </p>
+          </div>
+
           <h2 className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
             자녀의 아침 식단을 입력(텍스트 또는 사진)하고
             <br />
             AI 분석 결과를 확인하세요
           </h2>
+
+          {/* 영양소 툴팁 안내 */}
+          <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <p className="text-xs text-green-800 dark:text-green-200 text-center">
+              💡 영양소 설명에 마우스를 올려보시면 더 자세한 정보를 볼 수
+              있어요!
+            </p>
+          </div>
           <div className="relative w-full mb-2">
             <input
               type="text"
@@ -316,6 +349,11 @@ export default function MealPage() {
           </Button>
           {result && (
             <div className="w-full flex flex-col items-center mt-2">
+              {/* 긍정적 피드백 */}
+              <div className="w-full mb-4">
+                <PositiveFeedbackCard feedback={getRandomPositiveFeedback()} />
+              </div>
+
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                 분석된 식단:{" "}
                 <span className="font-semibold text-gray-700 dark:text-gray-200">
@@ -335,17 +373,41 @@ export default function MealPage() {
                 {result.nutrition.map((n) => {
                   const color = n.color || "#60a5fa";
                   return (
-                    <span
-                      key={n.label}
-                      className="text-xs px-2 py-1 rounded-full"
-                      style={{
-                        background: color,
-                        color: "#fff",
-                        opacity: 0.85,
-                      }}
-                    >
-                      {n.label}: {n.value}
-                    </span>
+                    <div key={n.label} className="flex items-center gap-1">
+                      <span
+                        className="text-xs px-2 py-1 rounded-full"
+                        style={{
+                          background: color,
+                          color: "#fff",
+                          opacity: 0.85,
+                        }}
+                      >
+                        {n.label}: {n.value}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setModalState({
+                            isOpen: true,
+                            nutrient: n.label,
+                            content: getNutritionTooltip(n.label),
+                          })
+                        }
+                        className="text-gray-400 hover:text-blue-500 transition-colors"
+                        title={`${n.label} 정보 보기`}
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -366,6 +428,16 @@ export default function MealPage() {
           )}
         </div>
       </div>
+
+      {/* 영양소 정보 모달 */}
+      <NutritionModal
+        isOpen={modalState.isOpen}
+        onClose={() =>
+          setModalState({ isOpen: false, nutrient: "", content: "" })
+        }
+        nutrient={modalState.nutrient}
+        content={modalState.content}
+      />
     </>
   );
 }

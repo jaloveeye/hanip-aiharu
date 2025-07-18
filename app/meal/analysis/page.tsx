@@ -9,6 +9,15 @@ import {
   parseLackExcess,
   parseRecommend,
 } from "@/lib/utils/analysisParser";
+import FAQ from "@/components/ui/FAQ";
+import AlternativeFoods from "@/components/ui/AlternativeFoods";
+import NutritionModal from "@/components/ui/NutritionModal";
+import {
+  getNutritionTooltip,
+  getAlternativeFoods,
+  FAQ_ITEMS,
+  DAD_GUIDE_MESSAGES,
+} from "@/lib/utils/dadGuide";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -47,6 +56,15 @@ export default function MealAnalysisPage() {
   const [page, setPage] = useState(0);
   const loader = useRef<HTMLDivElement | null>(null);
   const [openIndexes, setOpenIndexes] = useState<Set<number>>(new Set());
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    nutrient: string;
+    content: string;
+  }>({
+    isOpen: false,
+    nutrient: "",
+    content: "",
+  });
 
   // 최초/페이지 변경 시 데이터 fetch
   useEffect(() => {
@@ -105,6 +123,13 @@ export default function MealAnalysisPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
       <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-2xl flex flex-col items-center border border-gray-100 dark:border-gray-800">
+        {/* 아빠를 위한 친절한 안내 메시지 */}
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 w-full">
+          <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
+            {DAD_GUIDE_MESSAGES.encouragement}
+          </p>
+        </div>
+
         <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4 text-center">
           식단 분석 결과
         </h1>
@@ -195,13 +220,39 @@ export default function MealAnalysisPage() {
                         if (lackList.includes(label))
                           barColor = "bg-yellow-400";
                         if (excessList.includes(label)) barColor = "bg-red-400";
+
                         return (
                           <div
                             key={idx}
                             className="flex flex-col items-center w-28"
                           >
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {label}
+                            <div className="flex items-center gap-1 mb-1">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {label}
+                              </div>
+                              <button
+                                onClick={() =>
+                                  setModalState({
+                                    isOpen: true,
+                                    nutrient: label,
+                                    content: getNutritionTooltip(label),
+                                  })
+                                }
+                                className="text-gray-400 hover:text-blue-500 transition-colors"
+                                title={`${label} 정보 보기`}
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
                             </div>
                             <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded">
                               <div
@@ -280,6 +331,12 @@ export default function MealAnalysisPage() {
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-4">
                   {(() => {
                     const { lack, excess } = parseLackExcess(result.result);
+                    const lackList = lack
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    const alternatives = getAlternativeFoods(lackList);
+
                     return (
                       <>
                         <div className="mb-1 text-sm">
@@ -294,6 +351,12 @@ export default function MealAnalysisPage() {
                           </span>{" "}
                           {excess || "없음"}
                         </div>
+                        {/* 대체 음식 제안 */}
+                        {Object.keys(alternatives).length > 0 && (
+                          <div className="mt-3">
+                            <AlternativeFoods alternatives={alternatives} />
+                          </div>
+                        )}
                       </>
                     );
                   })()}
@@ -362,7 +425,22 @@ export default function MealAnalysisPage() {
             )}
           </div>
         )}
+
+        {/* FAQ 섹션 */}
+        <div className="mt-8 w-full max-w-2xl">
+          <FAQ items={FAQ_ITEMS} title="아빠를 위한 자주 묻는 질문" />
+        </div>
       </div>
+
+      {/* 영양소 정보 모달 */}
+      <NutritionModal
+        isOpen={modalState.isOpen}
+        onClose={() =>
+          setModalState({ isOpen: false, nutrient: "", content: "" })
+        }
+        nutrient={modalState.nutrient}
+        content={modalState.content}
+      />
     </div>
   );
 }
