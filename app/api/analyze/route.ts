@@ -32,8 +32,19 @@ async function checkDuplicate(
 
 // OpenAI Vision(이미지) → 식재료/섭취량 추출
 async function callOpenAIVision(imageBase64: string): Promise<string> {
-  const systemPrompt = "당신은 식사 영양사입니다.";
-  const userPrompt = `다음 식단 사진을 분석해서 아래 기준에 따라 결과를 요약해줘. 설명, 표, 마크다운 등은 포함하지 마.\n\n1. 사진 속 식재료를 항목별로 정확히 추출해줘 (예: 밥, 계란프라이, 동그랑땡, 김치, 나물 등)\n2. 각 식재료의 대략적인 섭취량을 추정해줘 (예: 밥 반 공기, 계란 2개 등)\n식사는 7세 여아 기준입니다. 사진을 기반으로 최대한 정확하게 분석해주세요.`;
+  const systemPrompt =
+    "당신은 식사 영양사입니다. 정확하고 일관된 형식으로 응답해주세요.";
+  const userPrompt = `다음 식단 사진을 분석해서 아래 형식에 정확히 맞춰서 응답해주세요.
+
+응답 형식:
+1. 식재료: [식재료1, 식재료2, 식재료3, ...]
+2. 섭취량: [식재료1] [수량], [식재료2] [수량], [식재료3] [수량], ...
+
+예시:
+1. 식재료: 밥, 계란프라이, 동그랑땡, 김치, 나물
+2. 섭취량: 밥 반 공기, 계란 2개, 동그랑땡 3개, 김치 반 그릇, 나물 반 그릇
+
+식사는 7세 여아 기준입니다. 사진을 기반으로 최대한 정확하게 분석해주세요.`;
   console.log("[OpenAI Vision 호출 진입]", {
     systemPrompt,
     userPrompt,
@@ -55,7 +66,7 @@ async function callOpenAIVision(imageBase64: string): Promise<string> {
           ],
         },
       ],
-      temperature: 0.7,
+      temperature: 0.3,
     });
     console.log(
       "[OpenAI Vision 응답]",
@@ -71,8 +82,43 @@ async function callOpenAIVision(imageBase64: string): Promise<string> {
 // OpenAI 텍스트 분석
 async function callOpenAIText(meal: string): Promise<string> {
   const systemPrompt =
-    "당신은 아동 식사 영양사입니다. 아래 식단이 초등학교 1학년(7세) 여아의 아침 식사로 적절한지 평가해주세요.";
-  const userPrompt = `다음 기준에 따라 결과를 요약해줘. 설명, 표, 마크다운 등은 포함하지 마.\n\n1. 식단에 포함된 식재료와 음식명을 항목별로 정리해줘 (예: 밥, 계란프라이, 동그랑땡, 김치, 나물 등)\n2. 각 식재료의 대략적인 섭취량을 추정해줘 (예: 밥 반 공기, 계란 2개 등)\n3. 전체 식사의 열량(kcal), 주요 영양소(탄수화물, 단백질, 지방, 식이섬유, 칼슘, 철분, 비타민 A, C, D, 나트륨)를 요약표로 정리해줘\n4. 초등학교 1학년(7세) 기준 1일 권장 섭취량과 비교해서 %로 보여줘\n5. 부족한 영양소나 과잉된 항목이 있다면 따로 표시해줘\n6. 식단의 장점과 개선이 필요한 점을 요약해줘\n7. 내일 아침 추천 식단도 제안해줘 (부족했던 영양소를 보완할 수 있게)\n\n식사는 7세 여아 기준입니다. 반드시 위 기준을 모두 반영해서 분석해주세요.\n\n식단: ${meal}`;
+    "당신은 아동 식사 영양사입니다. 정확하고 일관된 형식으로 응답해주세요.";
+  const userPrompt = `다음 식단을 분석해서 아래 형식에 정확히 맞춰서 응답해주세요.
+
+응답 형식:
+1. 식재료: [식재료1, 식재료2, 식재료3, ...]
+2. 섭취량: [식재료1] [수량], [식재료2] [수량], [식재료3] [수량], ...
+3. 영양소 분석:
+   - 열량: [숫자]kcal
+   - 탄수화물: [숫자]g
+   - 단백질: [숫자]g
+   - 지방: [숫자]g
+   - 식이섬유: [숫자]g
+   - 칼슘: [숫자]mg
+   - 철분: [숫자]mg
+   - 비타민 A: [숫자]μg
+   - 비타민 C: [숫자]mg
+   - 비타민 D: [숫자]μg
+   - 나트륨: [숫자]mg
+4. 권장량 대비 (%):
+   - 열량: [숫자]%
+   - 탄수화물: [숫자]%
+   - 단백질: [숫자]%
+   - 지방: [숫자]%
+   - 식이섬유: [숫자]%
+   - 칼슘: [숫자]%
+   - 철분: [숫자]%
+   - 비타민 A: [숫자]%
+   - 비타민 C: [숫자]%
+   - 비타민 D: [숫자]%
+   - 나트륨: [숫자]%
+5. 부족한 영양소: [부족한 영양소명] (없으면 "없음")
+6. 과잉된 영양소: [과잉된 영양소명] (없으면 "없음")
+7. 추천 식단: [추천 음식1], [추천 음식2], [추천 음식3], ...
+
+식사는 7세 여아 기준입니다. 반드시 위 형식을 정확히 지켜서 응답해주세요.
+
+식단: ${meal}`;
   console.log("[OpenAI 텍스트 호출 진입]", { systemPrompt, userPrompt, meal });
   try {
     const chat = await openai.chat.completions.create({
@@ -81,7 +127,7 @@ async function callOpenAIText(meal: string): Promise<string> {
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.7,
+      temperature: 0.3,
     });
     console.log(
       "[OpenAI 텍스트 응답]",
@@ -228,23 +274,36 @@ export async function POST(req: Request): Promise<Response> {
     }
     const analysis_id = analysisInsertData?.id;
 
-    // 추천 식단(ingredients) 추출 및 저장 (여러 줄 지원)
+    // 추천 식단(ingredients) 추출 및 저장
     let ingredients = "";
-    // 1. 추천 식단 블록 전체 추출
-    const recommendBlockMatch = analysisText.match(
-      /(추천 식단|내일 아침 추천 식단)[^\n]*\n([\s\S]+)/
-    );
-    if (recommendBlockMatch) {
-      const block = recommendBlockMatch[2];
-      // 2. 각 줄에서 '- ' 또는 '• '로 시작하는 항목만 추출
-      const lines = block.split("\n");
-      const items = lines
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith("-") || line.startsWith("•"))
-        .map((line) => line.replace(/^[-•]\s*/, "").replace(/^[-•]/, ""))
+
+    // 1. 새로운 형식: "7. 추천 식단: [달걀 요리], [시금치 무침], [오렌지 주스]"
+    const newFormatMatch = analysisText.match(/7\.\s*추천 식단:\s*([^\n]+)/);
+    if (newFormatMatch) {
+      const items = newFormatMatch[1]
+        .split(",")
+        .map((item) => item.trim())
+        .map((item) => item.replace(/^\[|\]$/g, "")) // 대괄호 제거
         .filter(Boolean);
       ingredients = items.join(",");
+    } else {
+      // 2. 기존 형식 처리 (호환성 유지)
+      const recommendBlockMatch = analysisText.match(
+        /(추천 식단|내일 아침 추천 식단)[^\n]*\n([\s\S]+)/
+      );
+      if (recommendBlockMatch) {
+        const block = recommendBlockMatch[2];
+        // 각 줄에서 '- ' 또는 '• '로 시작하는 항목만 추출
+        const lines = block.split("\n");
+        const items = lines
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("-") || line.startsWith("•"))
+          .map((line) => line.replace(/^[-•]\s*/, "").replace(/^[-•]/, ""))
+          .filter(Boolean);
+        ingredients = items.join(",");
+      }
     }
+
     if (ingredients && analysis_id) {
       const { error: recError } = await supabase
         .from("recommendations")
@@ -259,7 +318,14 @@ export async function POST(req: Request): Promise<Response> {
         ]);
       if (recError) {
         console.error("[API] /api/analyze 추천식단 저장 오류", recError);
+      } else {
+        console.log("[API] /api/analyze 추천식단 저장 성공", { ingredients });
       }
+    } else {
+      console.log("[API] /api/analyze 추천식단 없음", {
+        ingredients,
+        analysis_id,
+      });
     }
 
     // 새로운 분석 시 이전 추천 식단 자동 체크 (checked 컬럼이 없으므로 임시로 비활성화)

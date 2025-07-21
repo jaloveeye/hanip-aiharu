@@ -1,6 +1,71 @@
+// 새로운 형식의 영양소 파싱 (구체적인 형식 지정)
+export function parseActualNutritionNew(result: string) {
+  const actual: { [key: string]: number } = {};
+
+  // "3. 영양소 분석:" 섹션 찾기
+  const match = result.match(/3\. 영양소 분석:\s*\n([\s\S]+?)(?=\n4\.|$)/);
+  if (match) {
+    const lines = match[1].split("\n");
+    for (const line of lines) {
+      const m = line.match(/-\s*([^:]+):\s*([\d\.]+)([a-zA-Zㄱ-ㅎ가-힣㎍RE]*)/);
+      if (m) {
+        const label = m[1].trim();
+        const value = parseFloat(m[2]);
+        if (!isNaN(value)) {
+          actual[label] = value;
+        }
+      }
+    }
+  }
+
+  return actual;
+}
+
+// 새로운 형식의 부족/과잉 파싱
+export function parseLackExcessNew(result: string) {
+  let lack = "";
+  let excess = "";
+
+  // "5. 부족한 영양소:" 찾기
+  const lackMatch = result.match(/5\. 부족한 영양소:\s*([^\n]+)/);
+  if (lackMatch) {
+    lack = lackMatch[1].trim();
+    if (lack === "없음") lack = "";
+  }
+
+  // "6. 과잉된 영양소:" 찾기
+  const excessMatch = result.match(/6\. 과잉된 영양소:\s*([^\n]+)/);
+  if (excessMatch) {
+    excess = excessMatch[1].trim();
+    if (excess === "없음") excess = "";
+  }
+
+  return { lack, excess };
+}
+
+// 새로운 형식의 추천 식단 파싱
+export function parseRecommendNew(result: string) {
+  const match = result.match(/7\. 추천 식단:\s*([^\n]+)/);
+  if (match) {
+    const items = match[1]
+      .split(",")
+      .map((item) => item.trim())
+      .map((item) => item.replace(/^\[|\]$/g, "")) // 대괄호 제거
+      .filter(Boolean);
+    return items;
+  }
+  return [];
+}
+
 // 분석 결과에서 실제 영양소 섭취량 파싱 (숫자만 추출)
 export function parseActualNutrition(result: string) {
   const actual: { [key: string]: number } = {};
+
+  // 새로운 형식 먼저 시도
+  const newResult = parseActualNutritionNew(result);
+  if (Object.keys(newResult).length > 0) {
+    return newResult;
+  }
 
   // 다양한 영양소 섹션 패턴 시도
   const patterns = [
@@ -47,8 +112,14 @@ export function parseActualNutrition(result: string) {
 
 // 부족/과잉 영양소 파싱 함수
 export function parseLackExcess(result: string) {
-  let lack = "",
-    excess = "";
+  // 새로운 형식 먼저 시도
+  const newResult = parseLackExcessNew(result);
+  if (newResult.lack || newResult.excess) {
+    return newResult;
+  }
+
+  let lack = "";
+  let excess = "";
 
   // 다양한 형태의 부족/과잉 블록 패턴 시도
   const blockPatterns = [
@@ -122,6 +193,12 @@ export function parseLackExcess(result: string) {
 
 // 추천 식단 파싱 함수
 export function parseRecommend(result: string) {
+  // 새로운 형식 먼저 시도
+  const newResult = parseRecommendNew(result);
+  if (newResult.length > 0) {
+    return newResult;
+  }
+
   // 다양한 추천 식단 패턴 시도
   const patterns = [
     {

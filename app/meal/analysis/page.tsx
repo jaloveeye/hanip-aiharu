@@ -199,13 +199,52 @@ export default function MealAnalysisPage() {
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {(() => {
-                      // meal_text에서 섭취량 정보 추출
-                      const mealText = result.meal_text;
+                      // 새로운 형식: "2. 섭취량: 바나나 1개, 당근 몇 조각, 우유 한 잔, 견과류 믹스 한 줌"
                       const resultText = result.result;
+                      const mealText = result.meal_text;
 
-                      // 1. meal_text에서 섭취량 정보가 있는지 확인
+                      // 1. result에서 새로운 형식의 섭취량 추출
+                      const newFormatMatch = resultText.match(
+                        /2\.\s*섭취량:\s*([^\n]+)/
+                      );
+                      if (newFormatMatch) {
+                        const quantities = newFormatMatch[1]
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(Boolean);
+
+                        return quantities.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+                          >
+                            {item}
+                          </span>
+                        ));
+                      }
+
+                      // 2. meal_text에서 새로운 형식의 섭취량 추출
+                      const mealTextMatch = mealText.match(
+                        /2\.\s*섭취량:\s*([^\n]+)/
+                      );
+                      if (mealTextMatch) {
+                        const quantities = mealTextMatch[1]
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(Boolean);
+
+                        return quantities.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+                          >
+                            {item}
+                          </span>
+                        ));
+                      }
+
+                      // 3. 기존 형식 처리 (호환성 유지)
                       if (mealText.includes("섭취량:")) {
-                        // meal_text에서 섭취량 섹션 추출
                         const quantitiesMatch = mealText.match(
                           /2\.\s*섭취량:\s*\n([\s\S]+?)(?=\n\n|$)/
                         );
@@ -218,11 +257,7 @@ export default function MealAnalysisPage() {
                                 line.startsWith("-") || line.startsWith("•")
                             )
                             .map((line) => line.replace(/^[-•]\s*/, ""))
-                            .filter(Boolean)
-                            .map((item) => {
-                              // "견과류 믹스: 약 한 줌" 형태 그대로 유지
-                              return item;
-                            });
+                            .filter(Boolean);
 
                           return quantities.map((item, idx) => (
                             <span
@@ -235,7 +270,7 @@ export default function MealAnalysisPage() {
                         }
                       }
 
-                      // 2. meal_text에서 "사진 속 식재료:" 형태 처리
+                      // 4. "사진 속 식재료:" 형태 처리
                       if (mealText.includes("사진 속 식재료:")) {
                         const items = mealText
                           .replace(/^사진 속 식재료:\s*\n/, "")
@@ -243,7 +278,6 @@ export default function MealAnalysisPage() {
                           .map((line) => line.trim())
                           .filter((line) => line.match(/^\d+\.\s+/))
                           .map((line) => {
-                            // "1. 떡: 약 7조각" 형태에서 "떡: 약 7조각" 형태로 변환
                             const match = line.match(
                               /^\d+\.\s+([^:]+):\s*(.+)$/
                             );
@@ -263,7 +297,7 @@ export default function MealAnalysisPage() {
                         ));
                       }
 
-                      // 3. result에서 섭취량 정보 추출 (기존 방식)
+                      // 5. 기존 result에서 섭취량 정보 추출
                       const quantitiesMatch = resultText.match(
                         /2\.\s*섭취량:\s*\n([\s\S]+?)\n\s*3\.\s*전체/
                       );
@@ -276,11 +310,7 @@ export default function MealAnalysisPage() {
                               line.startsWith("-") || line.startsWith("•")
                           )
                           .map((line) => line.replace(/^[-•]\s*/, ""))
-                          .filter(Boolean)
-                          .map((item) => {
-                            // "견과류 믹스: 약 한 줌" 형태 그대로 유지
-                            return item;
-                          });
+                          .filter(Boolean);
 
                         return quantities.map((item, idx) => (
                           <span
@@ -292,23 +322,7 @@ export default function MealAnalysisPage() {
                         ));
                       }
 
-                      // 4. 기본 파싱 (하위 호환성)
-                      const items = resultText
-                        .split(/\n|,|\s*\d+\.\s*/)
-                        .map((s: string) => s.trim())
-                        .filter(
-                          (s: string) =>
-                            s && s.length > 0 && s !== "사진 속 식재료"
-                        );
-
-                      return items.map((item, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
-                        >
-                          {item}
-                        </span>
-                      ));
+                      return null;
                     })()}
                   </div>
                 </div>
