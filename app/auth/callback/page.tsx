@@ -29,11 +29,11 @@ export default function AuthCallbackPage() {
 
         if (session) {
           setStatus("success");
-          setMessage("로그인 성공! 잠시 후 메인 페이지로 이동합니다.");
+          setMessage("로그인 성공! 잠시 후 식단 분석 페이지로 이동합니다.");
 
-          // 1.5초 후 메인 페이지로 리다이렉트
+          // 1.5초 후 meal 페이지로 리다이렉트
           setTimeout(() => {
-            router.push("/");
+            router.push("/meal");
           }, 1500);
         } else {
           setStatus("error");
@@ -70,10 +70,10 @@ export default function AuthCallbackPage() {
             <div className="text-red-500 text-4xl mb-4">✗</div>
             <p className="text-lg text-neutral-700">{message}</p>
             <button
-              onClick={() => (window.location.href = "/")}
+              onClick={() => (window.location.href = "/meal")}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              메인 페이지로 이동
+              식단 분석 페이지로 이동
             </button>
           </>
         )}
