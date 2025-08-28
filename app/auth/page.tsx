@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import Loading from "@/components/ui/Loading";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient();
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
