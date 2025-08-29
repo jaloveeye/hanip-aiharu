@@ -32,9 +32,18 @@ export default function useUser() {
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/");
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      // 로그아웃 후 약간의 지연을 두고 홈페이지로 이동
+      setTimeout(() => {
+        router.push("/");
+      }, 100);
+    } catch (error) {
+      console.error("로그아웃 중 오류 발생:", error);
+      // 오류가 발생해도 홈페이지로 이동
+      router.push("/");
+    }
   };
 
   return { user, loading, logout };

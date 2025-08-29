@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth")
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
     return NextResponse.redirect(url);

@@ -26,33 +26,33 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center relative">
+    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-black dark:to-gray-800">
       {loading && (
         <div className="fixed inset-0 bg-black/40 flex flex-col items-center justify-center z-50">
-          <Loading message="로그인 중..." />
+          <Loading message="잠시만요..." />
         </div>
       )}
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 w-full max-w-xs flex flex-col items-center">
+      <div className="bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col items-center border border-gray-100 dark:border-gray-800">
         {/* 로고/앱명 */}
-        <div className="mb-4 flex flex-col items-center">
+        <div className="mb-6 flex flex-col items-center">
           <span className="text-base font-semibold text-gray-400 dark:text-gray-500 mb-1 tracking-widest">
             아이하루
           </span>
-          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+          <span className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
             한입
           </span>
-          <span className="text-sm text-gray-500 dark:text-gray-300">
+          <span className="text-sm text-gray-500 dark:text-gray-300 text-center">
             아침 식단을 쉽고 똑똑하게 관리하세요
           </span>
         </div>
         {/* 구분선 */}
-        <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-4" />
+        <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-6" />
         {/* 구글 로그인 버튼 */}
         <Button
           type="button"
           variant="primary"
           size="md"
-          className="w-full flex items-center justify-center gap-2 bg-[#4285F4] hover:bg-[#357ae8] dark:bg-[#4285F4] dark:hover:bg-[#357ae8] text-white font-semibold text-base py-2 rounded-lg shadow"
+          className="w-full flex items-center justify-center gap-2 bg-[#4285F4] hover:bg-[#357ae8] dark:bg-[#4285F4] dark:hover:bg-[#357ae8] text-white font-semibold text-base py-3 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl"
           onClick={handleGoogleLogin}
           disabled={loading}
         >
