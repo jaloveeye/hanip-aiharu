@@ -13,12 +13,12 @@ export default function AuthPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (typeof window !== "undefined" ? window.location.origin : "");
       await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: siteUrl + "/auth/callback" },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { access_type: "offline", prompt: "consent" },
+        },
       });
     } finally {
       setLoading(false);
