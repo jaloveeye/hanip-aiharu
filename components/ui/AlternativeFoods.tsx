@@ -5,6 +5,8 @@ interface AlternativeFoodsProps {
   className?: string;
 }
 
+import { NUTRITION_GUIDE } from "@/lib/utils/dadGuide";
+
 export default function AlternativeFoods({
   alternatives,
   className = "",
@@ -42,12 +44,21 @@ export default function AlternativeFoods({
           </div>
         ))}
       </div>
-      <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-        <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
-          💡 팁: 한 번에 모든 것을 바꾸려 하지 마세요. 작은 변화부터
-          시작해보세요!
-        </p>
-      </div>
+      {(() => {
+        const nutrients = Object.keys(alternatives);
+        const tips = nutrients
+          .map((n) => NUTRITION_GUIDE[n]?.dailyTip)
+          .filter(Boolean) as string[];
+        if (tips.length === 0) return null;
+        const combined = tips.slice(0, 2).join(" · ");
+        return (
+          <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
+              💡 팁: {combined}
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { createBrowserClient } from "@supabase/ssr";
 import Loading from "@/components/ui/Loading";
 import {
   parseActualNutrition,
-  parseLackExcess,
   parseRecommend,
 } from "@/lib/utils/analysisParser";
 import FAQ from "@/components/ui/FAQ";
@@ -334,16 +333,30 @@ export default function MealAnalysisPage() {
                   <div className="flex flex-wrap gap-2">
                     {(() => {
                       const actual = parseActualNutrition(result.result);
-                      const { lack, excess } = parseLackExcess(result.result);
-                      // 부족/과잉 영양소를 리스트로 분리
-                      const lackList = lack
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean);
-                      const excessList = excess
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean);
+                      // 권장량 대비로 부족/과잉 산출 (LLM 결과 보정)
+                      const LACK_THRESHOLD = 0.8; // 80% 미만이면 부족
+                      const DEFAULT_EXCESS_THRESHOLD = 1.2; // 120% 초과면 과잉
+                      const SODIUM_EXCESS_THRESHOLD = 1.0; // 나트륨은 권장량 초과 즉시 과잉
+                      const lackList: string[] = [];
+                      const excessList: string[] = [];
+                      Object.keys(RECOMMENDED).forEach((key) => {
+                        const actualValue = actual[key];
+                        const recommended = RECOMMENDED[key];
+                        if (typeof actualValue !== "number" || !recommended)
+                          return;
+                        const percent = actualValue / recommended;
+                        if (percent < LACK_THRESHOLD) {
+                          lackList.push(key);
+                        } else {
+                          const threshold =
+                            key === "나트륨"
+                              ? SODIUM_EXCESS_THRESHOLD
+                              : DEFAULT_EXCESS_THRESHOLD;
+                          if (percent > threshold) {
+                            excessList.push(key);
+                          }
+                        }
+                      });
                       return Object.keys(RECOMMENDED).map((label, idx) => {
                         const actualValue = actual[label] ?? null;
                         const recommended = RECOMMENDED[label];
@@ -466,11 +479,30 @@ export default function MealAnalysisPage() {
                 {/* 3. 부족/과잉 영양소 */}
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-4">
                   {(() => {
-                    const { lack, excess } = parseLackExcess(result.result);
-                    const lackList = lack
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean);
+                    const actual = parseActualNutrition(result.result);
+                    const LACK_THRESHOLD = 0.8;
+                    const DEFAULT_EXCESS_THRESHOLD = 1.2;
+                    const SODIUM_EXCESS_THRESHOLD = 1.0;
+                    const lackList: string[] = [];
+                    const excessList: string[] = [];
+                    Object.keys(RECOMMENDED).forEach((key) => {
+                      const actualValue = actual[key];
+                      const recommended = RECOMMENDED[key];
+                      if (typeof actualValue !== "number" || !recommended)
+                        return;
+                      const percent = actualValue / recommended;
+                      if (percent < LACK_THRESHOLD) {
+                        lackList.push(key);
+                      } else {
+                        const threshold =
+                          key === "나트륨"
+                            ? SODIUM_EXCESS_THRESHOLD
+                            : DEFAULT_EXCESS_THRESHOLD;
+                        if (percent > threshold) {
+                          excessList.push(key);
+                        }
+                      }
+                    });
                     const alternatives = getAlternativeFoods(lackList);
 
                     return (
@@ -479,13 +511,15 @@ export default function MealAnalysisPage() {
                           <span className="font-semibold text-red-500 dark:text-red-300">
                             부족한 영양소:
                           </span>{" "}
-                          {lack || "없음"}
+                          {lackList.length > 0 ? lackList.join(", ") : "없음"}
                         </div>
                         <div className="mb-1 text-sm">
                           <span className="font-semibold text-yellow-600 dark:text-yellow-300">
                             과잉된 영양소:
                           </span>{" "}
-                          {excess || "없음"}
+                          {excessList.length > 0
+                            ? excessList.join(", ")
+                            : "없음"}
                         </div>
                         {/* 대체 음식 제안 */}
                         {Object.keys(alternatives).length > 0 && (
